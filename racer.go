@@ -10,7 +10,6 @@ const (
 	screenHeight = 600
 )
 
-
 func main() {
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
 		fmt.Println("Init SDL: ", err)
@@ -37,17 +36,23 @@ func main() {
 
 	defer renderer.Destroy()
 
-	for {
+	var quit = false
+
+	for !quit {
 
 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-			switch event.(type) {
+			switch eType := event.(type) {
 			case *sdl.QuitEvent:
-				return
+				quit = true
+			case *sdl.KeyboardEvent:
+				if eType.Keysym.Sym == sdl.K_ESCAPE {
+					quit = true
+				}
 			}
 		}
 
-		renderer.SetDrawColor(255, 255, 255, 255)
 		renderer.Clear()
+		renderer.SetDrawColor(255, 255, 255, 255)
 		renderer.Present()
 	}
 }
