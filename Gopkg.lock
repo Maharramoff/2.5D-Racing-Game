@@ -2,22 +2,16 @@
 
 
 [[projects]]
-  digest = "1:0856aee62460df19f84b2e34b180ed1a068195aa8edf7064aedaf89a1fb49a60"
-  name = "gopkg.in/teh-cmc/go-sfml.v24"
-  packages = [
-    "graphics",
-    "window",
-  ]
+  branch = "master"
+  digest = "1:f1a2f8ae93252ae697e751141903dd1ba9841439e6458982e9af9bea72c58e56"
+  name = "github.com/manyminds/gosfml"
+  packages = ["."]
   pruneopts = "UT"
-  revision = "372cfe28f3e755aaa1894b689bab4e80585f5ae3"
-  version = "v24"
+  revision = "9dbf5ee7f8d2d09a50c31bbefa0b2484b019455a"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = [
-    "gopkg.in/teh-cmc/go-sfml.v24/graphics",
-    "gopkg.in/teh-cmc/go-sfml.v24/window",
-  ]
+  input-imports = ["github.com/manyminds/gosfml"]
   solver-name = "gps-cdcl"
   solver-version = 1
