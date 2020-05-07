@@ -14,14 +14,14 @@ const (
 	title        = "Racer 2.5D"
 )
 
-func drawRoad(app *sfml.RenderWindow, color sfml.Color, x1, y1, w1, x2, y2, w2 float32) {
+func drawPolygon(app *sfml.RenderWindow, color sfml.Color, bottomX, bottomY, bottomWidth, topX, topY, topWidth float32) {
 	shape, _ := sfml.NewConvexShape()
 	shape.SetPointCount(4)
 	shape.SetFillColor(color)
-	shape.SetPoint(0, sfml.Vector2f{X: x1 - w1, Y: y1})
-	shape.SetPoint(1, sfml.Vector2f{X: x2 - w2, Y: y2})
-	shape.SetPoint(2, sfml.Vector2f{X: x2 + w2, Y: y2})
-	shape.SetPoint(3, sfml.Vector2f{X: x1 + w1, Y: y1})
+	shape.SetPoint(0, sfml.Vector2f{X: bottomX - bottomWidth, Y: bottomY})
+	shape.SetPoint(1, sfml.Vector2f{X: topX - topWidth, Y: topY})
+	shape.SetPoint(2, sfml.Vector2f{X: topX + topWidth, Y: topY})
+	shape.SetPoint(3, sfml.Vector2f{X: bottomX + bottomWidth, Y: bottomY})
 	app.Draw(shape, sfml.DefaultRenderStates())
 }
 
@@ -47,7 +47,7 @@ func main() {
 		}
 
 		app.Clear(sfml.ColorBlack())
-		drawRoad(app, sfml.ColorGreen(), 500, 500, 200, 500, 300, 100)
+		drawPolygon(app, sfml.ColorGreen(), 500, 500, 200, 500, 300, 100)
 		app.Display()
 	}
 }
