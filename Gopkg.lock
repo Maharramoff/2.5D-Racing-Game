@@ -2,19 +2,22 @@
 
 
 [[projects]]
-  digest = "1:182557eb22c40addfcaae259b21d89a677ad5dfacc1efa1089a90ab4abd632be"
-  name = "github.com/veandco/go-sdl2"
+  digest = "1:0856aee62460df19f84b2e34b180ed1a068195aa8edf7064aedaf89a1fb49a60"
+  name = "gopkg.in/teh-cmc/go-sfml.v24"
   packages = [
-    "gfx",
-    "sdl",
+    "graphics",
+    "window",
   ]
   pruneopts = "UT"
-  revision = "e1267dc212621f5ec25c38f98fb9c304c0295cbf"
-  version = "v0.4.1"
+  revision = "372cfe28f3e755aaa1894b689bab4e80585f5ae3"
+  version = "v24"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = ["github.com/veandco/go-sdl2/gfx"]
+  input-imports = [
+    "gopkg.in/teh-cmc/go-sfml.v24/graphics",
+    "gopkg.in/teh-cmc/go-sfml.v24/window",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
