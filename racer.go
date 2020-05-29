@@ -16,10 +16,6 @@ const (
 	CAMDEPTH     = 0.84
 )
 
-func Round(num float64) float32 {
-	return float32(int(num))
-}
-
 func RoundtoFloat(num int) float32 {
 	return float32(num)
 }
@@ -77,8 +73,6 @@ func main() {
 	app.SetFramerateLimit(60)
 	app.SetMouseCursorVisible(false)
 
-	var roadLines []RoadLine
-
 	for app.IsOpen() {
 		for event := app.PollEvent(); event != nil; event = app.PollEvent() {
 			switch eventType := event.(type) {
@@ -92,18 +86,20 @@ func main() {
 			}
 		}
 
-		app.Clear(sfml.ColorWhite())
+		app.Clear(sfml.Color{R: 109, G: 150, B: 255, A: 255})
 
-		for count := 0; count < 1200; count++ {
-			linee := NewRoadLine()
-			linee._3dz = float64(count * SEGMENTLEN)
+		var maxRoadLen = 1500
+		var roadLines []RoadLine
+
+		for count := 0; count < maxRoadLen; count++ {
+			roadLine := NewRoadLine()
+			roadLine._3dz = float64(count * SEGMENTLEN)
 			if count > 750 {
-				linee._3dy = math.Sin(float64(count/30.0)) * 1500
+				roadLine._3dy = math.Sin(float64(count/30.0)) * 1500
 			}
-			roadLines = append(roadLines, *linee)
+			roadLines = append(roadLines, *roadLine)
 		}
 
-		var n = len(roadLines)
 		var startPosition = 0
 		var camHeight = roadLines[startPosition]._3dy + 1500
 		var maxy float64 = SCREENHEIGHT
@@ -116,15 +112,15 @@ func main() {
 
 		for count := startPosition; count < startPosition+300; count++ {
 
-			if count >= n {
-				diff = n * SEGMENTLEN
+			if count >= maxRoadLen {
+				diff = maxRoadLen * SEGMENTLEN
 			} else {
 				diff = 0
 			}
 
 			camZ = float64(startPosition*SEGMENTLEN - diff)
 
-			line := handleCam(roadLines[count%n], camX, camHeight, camZ)
+			line := handleCam(roadLines[count%maxRoadLen], camX, camHeight, camZ)
 
 			if line.y >= maxy {
 				continue
@@ -146,7 +142,7 @@ func main() {
 			if count == 0 {
 				pr = line
 			} else {
-				currentIdx := (count - 1) % n
+				currentIdx := (count - 1) % maxRoadLen
 				pr = handleCam(roadLines[currentIdx], camX, camHeight, camZ)
 			}
 
