@@ -2,18 +2,19 @@ package main
 
 import (
 	sfml "github.com/manyminds/gosfml"
-	"math"
 	"runtime"
 )
 
 const (
-	SCREENWIDTH  = 1024
-	SCREENHEIGHT = 768
-	BITSPERPIXEL = 24
-	TITLE        = "Racer 2.5D"
-	ROADWIDTH    = 2000
-	SEGMENTLEN   = 200
-	CAMDEPTH     = 0.84
+	ScreenWidth       = 1024
+	ScreenHeight      = 768
+	BitsPerPixel      = 24
+	Title             = "Racer 2.5D"
+	RoadWidth         = 2000
+	VisibleRoadLength = 300
+	SegmentLength     = 200
+	CamDepth          = 0.84
+	CamInitialHeight  = CamDepth * 1750
 )
 
 func RoundtoFloat(num int) float32 {
@@ -31,10 +32,10 @@ func NewRoadLine() *RoadLine {
 }
 
 func handleCam(line RoadLine, camX, camY, camZ float64) RoadLine {
-	line.scale = CAMDEPTH / (line._3dz - camZ)
-	line.x = (1 + line.scale*(line._3dx-camX)) * SCREENWIDTH / 2
-	line.y = (1 - line.scale*(line._3dy-camY)) * SCREENHEIGHT / 2
-	line.width = line.scale * ROADWIDTH * SCREENWIDTH / 2
+	line.scale = CamDepth / (line._3dz - camZ)
+	line.x = (1 + line.scale*(line._3dx-camX)) * ScreenWidth / 2
+	line.y = (1 - line.scale*(line._3dy-camY)) * ScreenHeight / 2
+	line.width = line.scale * RoadWidth * ScreenWidth / 2
 	return line
 }
 
@@ -54,24 +55,32 @@ func DrawPolygon(app *sfml.RenderWindow, color sfml.Color, bottomX, bottomY, bot
 func main() {
 
 	videoMode := sfml.VideoMode{
-		Width:        SCREENWIDTH,
-		Height:       SCREENHEIGHT,
-		BitsPerPixel: BITSPERPIXEL,
+		Width:        ScreenWidth,
+		Height:       ScreenHeight,
+		BitsPerPixel: BitsPerPixel,
 	}
 
 	style := sfml.StyleDefault
 
 	contextSettings := sfml.ContextSettings{
-		DepthBits:         BITSPERPIXEL,
+		DepthBits:         BitsPerPixel,
 		StencilBits:       0,
 		AntialiasingLevel: 0,
 		MajorVersion:      0,
 		MinorVersion:      0,
 	}
 
-	app := sfml.NewRenderWindow(videoMode, TITLE, style, contextSettings)
+	app := sfml.NewRenderWindow(videoMode, Title, style, contextSettings)
 	app.SetFramerateLimit(60)
 	app.SetMouseCursorVisible(false)
+
+	var startPosition = 0
+	var maxRoadLen = 1600
+	var camHeight, maxY float64
+	var grassColor, rumbleColor, roadColor sfml.Color
+	var camX, camZ float64 = 0, 0
+	var pr RoadLine
+	var roadLines []RoadLine
 
 	for app.IsOpen() {
 		for event := app.PollEvent(); event != nil; event = app.PollEvent() {
@@ -88,44 +97,36 @@ func main() {
 
 		app.Clear(sfml.Color{R: 109, G: 150, B: 255, A: 255})
 
-		var maxRoadLen = 1500
-		var roadLines []RoadLine
-
+		roadLines = roadLines[:0]
 		for count := 0; count < maxRoadLen; count++ {
 			roadLine := NewRoadLine()
-			roadLine._3dz = float64(count * SEGMENTLEN)
-			if count > 750 {
-				roadLine._3dy = math.Sin(float64(count/30.0)) * 1500
+			roadLine._3dz = float64(count * SegmentLength)
+			if count > 100 {
+				//roadLine._3dy = math.Sin(float64(count/30.0)) * 1500
 			}
 			roadLines = append(roadLines, *roadLine)
 		}
 
-		var startPosition = 0
-		var camHeight = roadLines[startPosition]._3dy + 1500
-		var maxy float64 = SCREENHEIGHT
-		var grassColor sfml.Color
-		var rumbleColor sfml.Color
-		var roadColor sfml.Color
+		camHeight = roadLines[startPosition]._3dy + CamInitialHeight
+		maxY = ScreenHeight
 		var diff = 0
-		var camX, camZ float64 = 0, 0
-		var pr RoadLine
 
-		for count := startPosition; count < startPosition+300; count++ {
+		for count := startPosition; count < startPosition+VisibleRoadLength; count++ {
 
 			if count >= maxRoadLen {
-				diff = maxRoadLen * SEGMENTLEN
+				diff = maxRoadLen * SegmentLength
 			} else {
 				diff = 0
 			}
 
-			camZ = float64(startPosition*SEGMENTLEN - diff)
+			camZ = float64(startPosition*SegmentLength - diff)
 
 			line := handleCam(roadLines[count%maxRoadLen], camX, camHeight, camZ)
 
-			if line.y >= maxy {
+			if line.y >= maxY {
 				continue
 			}
-			maxy = line.y
+			maxY = line.y
 
 			grassColor = sfml.Color{G: 154, A: 255}
 			if (count/3)%2 == 0 {
@@ -147,7 +148,7 @@ func main() {
 			}
 
 			//fmt.Printf("%v ", int(line.width))
-			DrawPolygon(app, grassColor, 0, int(pr.y), SCREENWIDTH, 0, int(line.y), SCREENWIDTH)
+			DrawPolygon(app, grassColor, 0, int(pr.y), ScreenWidth, 0, int(line.y), ScreenWidth)
 			DrawPolygon(app, rumbleColor, int(pr.x), int(pr.y), int(pr.width*1.2), int(line.x), int(line.y), int(line.width*1.2))
 			DrawPolygon(app, roadColor, int(pr.x), int(pr.y), int(pr.width), int(line.x), int(line.y), int(line.width))
 
