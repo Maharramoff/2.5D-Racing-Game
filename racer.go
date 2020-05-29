@@ -5,6 +5,30 @@ import (
 	"runtime"
 )
 
+//==========================================================
+// GAME VARIABLES
+//==========================================================
+
+var startPosition, currentPosition, speed = 0, 0, 0
+var maxRoadLen = 1600
+var camHeight, maxY float64
+var grassColor, rumbleColor, roadColor sfml.Color
+var camX, camZ float64 = 0, 0
+var pr RoadLine
+var roadLines []RoadLine
+
+var SkyColor = sfml.Color{R: 182, G: 240, B: 255, A: 255}
+var RoadLightColor = sfml.Color{R: 73, G: 73, B: 73, A: 255}
+var RoadDarkColor = sfml.Color{R: 70, G: 70, B: 70, A: 255}
+var GrassDarkColor = sfml.Color{R: 16, G: 154, B: 16, A: 255}
+var GrassLightColor = sfml.Color{R: 16, G: 170, B: 16, A: 255}
+var RumbleDarkColor = sfml.Color{R: 192, G: 78, B: 73, A: 255}
+var RumblightColor = sfml.Color{R: 210, G: 210, B: 210, A: 255}
+
+//==========================================================
+// GAME CONSTANTS
+//==========================================================
+
 const (
 	ScreenWidth       = 1024
 	ScreenHeight      = 768
@@ -39,8 +63,6 @@ func handleCam(line RoadLine, camX, camY, camZ float64) RoadLine {
 	return line
 }
 
-func init() { runtime.LockOSThread() }
-
 func DrawPolygon(app *sfml.RenderWindow, color sfml.Color, bottomX, bottomY, bottomWidth, topX, topY, topWidth int) {
 	shape, _ := sfml.NewConvexShape()
 	shape.SetPointCount(4)
@@ -51,6 +73,8 @@ func DrawPolygon(app *sfml.RenderWindow, color sfml.Color, bottomX, bottomY, bot
 	shape.SetPoint(3, sfml.Vector2f{X: RoundtoFloat(bottomX + bottomWidth), Y: RoundtoFloat(bottomY)})
 	app.Draw(shape, sfml.DefaultRenderStates())
 }
+
+func init() { runtime.LockOSThread() }
 
 func main() {
 
@@ -73,14 +97,6 @@ func main() {
 	app := sfml.NewRenderWindow(videoMode, Title, style, contextSettings)
 	app.SetFramerateLimit(60)
 	app.SetMouseCursorVisible(false)
-
-	var startPosition, currentPosition, speed = 0, 0, 0
-	var maxRoadLen = 1600
-	var camHeight, maxY float64
-	var grassColor, rumbleColor, roadColor sfml.Color
-	var camX, camZ float64 = 0, 0
-	var pr RoadLine
-	var roadLines []RoadLine
 
 	for count := 0; count < maxRoadLen; count++ {
 		roadLine := NewRoadLine()
@@ -111,7 +127,7 @@ func main() {
 			speed = -150
 		}
 
-		app.Clear(sfml.Color{R: 188, G: 223, B: 251, A: 255})
+		app.Clear(SkyColor)
 
 		maxY = ScreenHeight
 		var diff = 0
@@ -136,17 +152,18 @@ func main() {
 			}
 			maxY = line.y
 
-			grassColor = sfml.Color{G: 154, A: 255}
-			if (count/3)%2 == 0 {
-				grassColor = sfml.Color{G: 154, A: 255}
+			grassColor = GrassDarkColor
+			rumbleColor = RumbleDarkColor
+			roadColor = RoadDarkColor
+
+			if (count/6)%2 == 0 {
+				grassColor = GrassLightColor
 			}
 
-			rumbleColor = sfml.Color{R: 226, G: 53, B: 0, A: 255}
 			if (count/3)%2 == 0 {
-				rumbleColor = sfml.Color{R: 255, G: 255, B: 255, A: 255}
+				rumbleColor = RumblightColor
+				roadColor = RoadLightColor
 			}
-
-			roadColor = sfml.Color{R: 91, G: 91, B: 91, A: 255}
 
 			if count == 0 {
 				pr = line
@@ -155,7 +172,6 @@ func main() {
 				pr = handleCam(roadLines[currentIdx], camX, camHeight, camZ)
 			}
 
-			//fmt.Printf("%v ", int(line.width))
 			DrawPolygon(app, grassColor, 0, int(pr.y), ScreenWidth, 0, int(line.y), ScreenWidth)
 			DrawPolygon(app, rumbleColor, int(pr.x), int(pr.y), int(pr.width*1.2), int(line.x), int(line.y), int(line.width*1.2))
 			DrawPolygon(app, roadColor, int(pr.x), int(pr.y), int(pr.width), int(line.x), int(line.y), int(line.width))
