@@ -74,13 +74,19 @@ func main() {
 	app.SetFramerateLimit(60)
 	app.SetMouseCursorVisible(false)
 
-	var startPosition = 0
+	var startPosition, currentPosition, speed = 0, 0, 0
 	var maxRoadLen = 1600
 	var camHeight, maxY float64
 	var grassColor, rumbleColor, roadColor sfml.Color
 	var camX, camZ float64 = 0, 0
 	var pr RoadLine
 	var roadLines []RoadLine
+
+	for count := 0; count < maxRoadLen; count++ {
+		roadLine := NewRoadLine()
+		roadLine._3dz = float64(count * SegmentLength)
+		roadLines = append(roadLines, *roadLine)
+	}
 
 	for app.IsOpen() {
 		for event := app.PollEvent(); event != nil; event = app.PollEvent() {
@@ -95,21 +101,23 @@ func main() {
 			}
 		}
 
-		app.Clear(sfml.Color{R: 109, G: 150, B: 255, A: 255})
+		speed = 0
 
-		roadLines = roadLines[:0]
-		for count := 0; count < maxRoadLen; count++ {
-			roadLine := NewRoadLine()
-			roadLine._3dz = float64(count * SegmentLength)
-			if count > 100 {
-				//roadLine._3dy = math.Sin(float64(count/30.0)) * 1500
-			}
-			roadLines = append(roadLines, *roadLine)
+		if sfml.KeyboardIsKeyPressed(sfml.KeyUp) {
+			speed = 150
 		}
 
-		camHeight = roadLines[startPosition]._3dy + CamInitialHeight
+		if sfml.KeyboardIsKeyPressed(sfml.KeyDown) {
+			speed = -150
+		}
+
+		app.Clear(sfml.Color{R: 188, G: 223, B: 251, A: 255})
+
 		maxY = ScreenHeight
 		var diff = 0
+		currentPosition += speed
+		startPosition = currentPosition / SegmentLength
+		camHeight = roadLines[startPosition]._3dy + CamInitialHeight
 
 		for count := startPosition; count < startPosition+VisibleRoadLength; count++ {
 
@@ -130,7 +138,7 @@ func main() {
 
 			grassColor = sfml.Color{G: 154, A: 255}
 			if (count/3)%2 == 0 {
-				grassColor = sfml.Color{R: 16, G: 200, B: 16, A: 255}
+				grassColor = sfml.Color{G: 154, A: 255}
 			}
 
 			rumbleColor = sfml.Color{R: 226, G: 53, B: 0, A: 255}
