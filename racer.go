@@ -132,12 +132,12 @@ func main() {
 			maxy = line.y
 
 			grassColor = sfml.Color{G: 154, A: 255}
-			if (count/2)%2 == 0 {
+			if (count/3)%2 == 0 {
 				grassColor = sfml.Color{R: 16, G: 200, B: 16, A: 255}
 			}
 
 			rumbleColor = sfml.Color{R: 226, G: 53, B: 0, A: 255}
-			if (count/2)%2 == 0 {
+			if (count/3)%2 == 0 {
 				rumbleColor = sfml.Color{R: 255, G: 255, B: 255, A: 255}
 			}
 
