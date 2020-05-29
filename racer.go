@@ -20,6 +20,10 @@ func Round(num float64) float32 {
 	return float32(int(num))
 }
 
+func RoundtoFloat(num int) float32 {
+	return float32(num)
+}
+
 type RoadLine struct {
 	_3dx, _3dy, _3dz float64
 	x, y, width      float64
@@ -40,14 +44,14 @@ func handleCam(line RoadLine, camX, camY, camZ float64) RoadLine {
 
 func init() { runtime.LockOSThread() }
 
-func DrawPolygon(app *sfml.RenderWindow, color sfml.Color, bottomX, bottomY, bottomWidth, topX, topY, topWidth float64) {
+func DrawPolygon(app *sfml.RenderWindow, color sfml.Color, bottomX, bottomY, bottomWidth, topX, topY, topWidth int) {
 	shape, _ := sfml.NewConvexShape()
 	shape.SetPointCount(4)
 	shape.SetFillColor(color)
-	shape.SetPoint(0, sfml.Vector2f{X: Round(bottomX - bottomWidth), Y: Round(bottomY)})
-	shape.SetPoint(1, sfml.Vector2f{X: Round(topX - topWidth), Y: Round(topY)})
-	shape.SetPoint(2, sfml.Vector2f{X: Round(topX + topWidth), Y: Round(topY)})
-	shape.SetPoint(3, sfml.Vector2f{X: Round(bottomX + bottomWidth), Y: Round(bottomY)})
+	shape.SetPoint(0, sfml.Vector2f{X: RoundtoFloat(bottomX - bottomWidth), Y: RoundtoFloat(bottomY)})
+	shape.SetPoint(1, sfml.Vector2f{X: RoundtoFloat(topX - topWidth), Y: RoundtoFloat(topY)})
+	shape.SetPoint(2, sfml.Vector2f{X: RoundtoFloat(topX + topWidth), Y: RoundtoFloat(topY)})
+	shape.SetPoint(3, sfml.Vector2f{X: RoundtoFloat(bottomX + bottomWidth), Y: RoundtoFloat(bottomY)})
 	app.Draw(shape, sfml.DefaultRenderStates())
 }
 
@@ -59,7 +63,7 @@ func main() {
 		BitsPerPixel: BITSPERPIXEL,
 	}
 
-	style := sfml.StyleNone
+	style := sfml.StyleDefault
 
 	contextSettings := sfml.ContextSettings{
 		DepthBits:         BITSPERPIXEL,
@@ -72,6 +76,8 @@ func main() {
 	app := sfml.NewRenderWindow(videoMode, TITLE, style, contextSettings)
 	app.SetFramerateLimit(60)
 	app.SetMouseCursorVisible(false)
+
+	var roadLines []RoadLine
 
 	for app.IsOpen() {
 		for event := app.PollEvent(); event != nil; event = app.PollEvent() {
@@ -88,9 +94,8 @@ func main() {
 
 		app.Clear(sfml.ColorWhite())
 
-		var roadLines []RoadLine
-		linee := NewRoadLine()
-		for count := 0; count < 1600; count++ {
+		for count := 0; count < 1200; count++ {
+			linee := NewRoadLine()
 			linee._3dz = float64(count * SEGMENTLEN)
 			if count > 750 {
 				linee._3dy = math.Sin(float64(count/30.0)) * 1500
@@ -103,10 +108,13 @@ func main() {
 		var camHeight = roadLines[startPosition]._3dy + 1500
 		var maxy float64 = SCREENHEIGHT
 		var grassColor sfml.Color
+		var rumbleColor sfml.Color
+		var roadColor sfml.Color
 		var diff = 0
 		var camX, camZ float64 = 0, 0
+		var pr RoadLine
 
-		for count := startPosition + 1; count < startPosition+300; count++ {
+		for count := startPosition; count < startPosition+300; count++ {
 
 			if count >= n {
 				diff = n * SEGMENTLEN
@@ -123,15 +131,30 @@ func main() {
 			}
 			maxy = line.y
 
-			grassColor = sfml.Color{R: 16, G: 200, B: 16, A: 255}
-			if (count/3)%2 != 0 {
-				grassColor = sfml.Color{G: 154, A: 255}
+			grassColor = sfml.Color{G: 154, A: 255}
+			if (count/2)%2 == 0 {
+				grassColor = sfml.Color{R: 16, G: 200, B: 16, A: 255}
 			}
 
-			currentIdx := (count - 1) % n
-			pr := handleCam(roadLines[currentIdx], camX, camHeight, camZ)
+			rumbleColor = sfml.Color{R: 226, G: 53, B: 0, A: 255}
+			if (count/2)%2 == 0 {
+				rumbleColor = sfml.Color{R: 255, G: 255, B: 255, A: 255}
+			}
 
-			DrawPolygon(app, grassColor, 0, pr.y, SCREENWIDTH, 0, line.y, SCREENWIDTH)
+			roadColor = sfml.Color{R: 91, G: 91, B: 91, A: 255}
+
+			if count == 0 {
+				pr = line
+			} else {
+				currentIdx := (count - 1) % n
+				pr = handleCam(roadLines[currentIdx], camX, camHeight, camZ)
+			}
+
+			//fmt.Printf("%v ", int(line.width))
+			DrawPolygon(app, grassColor, 0, int(pr.y), SCREENWIDTH, 0, int(line.y), SCREENWIDTH)
+			DrawPolygon(app, rumbleColor, int(pr.x), int(pr.y), int(pr.width*1.2), int(line.x), int(line.y), int(line.width*1.2))
+			DrawPolygon(app, roadColor, int(pr.x), int(pr.y), int(pr.width), int(line.x), int(line.y), int(line.width))
+
 		}
 
 		app.Display()
