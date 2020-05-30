@@ -10,12 +10,14 @@ import (
 // GAME VARIABLES
 //==========================================================
 
-var startPosition, currentPosition, speed = 0, 0, 0
+var startPosition, currentPosition, speed, currentLap = 0, 0, 0, 1
 var camHeight, maxY float64
 var currentGrassColor, currentRumbleColor, currentRoadColor, currentBrokenLineColor sfml.Color
 var camX, camDx, camZ float64 = 0, 0.1, 0
 var pr RoadLine
 var roadMap []RoadLine
+var carPos, carScale = sfml.Vector2f{X: 0, Y: 0}, sfml.Vector2f{X: 4.0, Y: 4.0}
+var carDim = sfml.IntRect{Left: 136, Top: 89, Width: 52, Height: 31}
 
 var SkyColor = sfml.Color{R: 182, G: 240, B: 255, A: 255}
 var RoadLightColor = sfml.Color{R: 73, G: 73, B: 73, A: 255}
@@ -41,6 +43,7 @@ const (
 	SegmentLength     = 200
 	CamDepth          = 0.84
 	CamInitialHeight  = CamDepth * 1750
+	MaxLaps           = 3
 )
 
 func RoundtoFloat(num int) float32 {
@@ -95,10 +98,10 @@ func DrawPolygon(app *sfml.RenderWindow, color sfml.Color, bottomX, bottomY, bot
 }
 
 func DrawStats(app *sfml.RenderWindow, txt string) {
-	font, _ := sfml.NewFontFromFile("assets/fonts/courier_prime/regular.ttf")
+	font, _ := sfml.NewFontFromFile("assets/fonts/faster_one/regular.ttf")
 	statsText, _ := sfml.NewText(font)
-	statsText.SetCharacterSize(16)
-	statsText.SetPosition(sfml.Vector2f{X: 5, Y: 5})
+	statsText.SetCharacterSize(30)
+	statsText.SetPosition(sfml.Vector2f{X: ScreenWidth - 90, Y: 20})
 	statsText.SetColor(sfml.ColorBlack())
 	statsText.SetString(txt)
 	app.Draw(statsText, sfml.DefaultRenderStates())
@@ -146,6 +149,22 @@ func main() {
 		panic(err)
 	}
 
+	texture, err := sfml.NewTextureFromFile("assets/images/game.png", nil)
+	if err != nil {
+		panic(err)
+	}
+
+	// Car sprite
+	carSprite, _ := sfml.NewSprite(texture)
+	if err != nil {
+		panic(err)
+	}
+
+	carSprite.SetTextureRect(carDim)
+	carSprite.SetScale(carScale)
+	carPos.X = ScreenWidth/2 - carSprite.GetGlobalBounds().Width + carSprite.GetGlobalBounds().Width/2
+	carPos.Y = ScreenHeight - carSprite.GetGlobalBounds().Height - 10
+
 	roadMap = generateRoadMap(MaxRoadLen)
 
 	for app.IsOpen() {
@@ -189,6 +208,7 @@ func main() {
 
 		for currentPosition >= MaxRoadLen*SegmentLength {
 			currentPosition -= MaxRoadLen * SegmentLength
+			currentLap += 1
 		}
 
 		for currentPosition < 0 {
@@ -199,7 +219,7 @@ func main() {
 		camHeight = roadMap[startPosition]._3dy + CamInitialHeight
 
 		app.Clear(SkyColor)
-		DrawStats(app, fmt.Sprintf("CURRENT POSITION: %d\nDIRECTION: %f", currentPosition, camX))
+		DrawStats(app, fmt.Sprintf("LAP\n%d/%d", currentLap, MaxLaps))
 
 		for count := startPosition; count < startPosition+VisibleRoadLength; count++ {
 
@@ -249,6 +269,8 @@ func main() {
 			DrawPolygon(app, currentBrokenLineColor, int(pr.x), int(pr.y), int(pr.width*0.03), int(line.x), int(line.y), int(line.width*0.03))
 
 		}
+		carSprite.SetPosition(carPos)
+		app.Draw(carSprite, sfml.DefaultRenderStates())
 		app.Display()
 	}
 }
