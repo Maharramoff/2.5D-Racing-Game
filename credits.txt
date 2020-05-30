@@ -1,0 +1,15 @@
+Sources of files included in this project
+======================
+
+boxcat_games_-_tricks.ogg
+---------------------------
+
+Source:
+    https://freemusicarchive.org/music/BoxCat_Games/Nameless_the_Hackers_RPG_Soundtrack/BoxCat_Games_-_Nameless-_the_Hackers_RPG_Soundtrack_-_24_Tricks
+License:
+    http://creativecommons.org/licenses/by/3.0/
+Credit:
+    Tricks by BoxCat Games is licensed under a Creative Commons Attribution License.
+    Permissions beyond the scope of this license may be available at http://boxcat.bandcamp.com
+Notes:
+    Ogg generated using https://convertio.co/ru/ogg-mp3/
