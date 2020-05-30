@@ -110,7 +110,7 @@ func init() {
 
 func main() {
 
-	musicBuffer, err := sfml.NewSoundBufferFromFile("assets/music/racer.ogg")
+	musicBuffer, err := sfml.NewSoundBufferFromFile("assets/music/boxcat_games_-_tricks.ogg")
 	music := sfml.NewSound(musicBuffer)
 	if err != nil {
 		panic(err)
