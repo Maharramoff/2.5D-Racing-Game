@@ -13,7 +13,7 @@ var startPosition, currentPosition, speed = 0, 0, 0
 var maxRoadLen = 1600
 var camHeight, maxY float64
 var currentGrassColor, currentRumbleColor, currentRoadColor, currentBrokenLineColor sfml.Color
-var camX, camZ float64 = 0, 0
+var camX, camDx, camZ float64 = 0, 0.1, 0
 var pr RoadLine
 var roadLines []RoadLine
 
@@ -120,6 +120,14 @@ func main() {
 
 		speed = 0
 
+		if sfml.KeyboardIsKeyPressed(sfml.KeyRight) {
+			camX += camDx
+		}
+
+		if sfml.KeyboardIsKeyPressed(sfml.KeyLeft) {
+			camX -= camDx
+		}
+
 		if sfml.KeyboardIsKeyPressed(sfml.KeyUp) {
 			speed = 150
 		}
@@ -146,7 +154,7 @@ func main() {
 
 			camZ = float64(startPosition*SegmentLength - diff)
 
-			line := handleCam(roadLines[count%maxRoadLen], camX, camHeight, camZ)
+			line := handleCam(roadLines[count%maxRoadLen], camX*RoadWidth, camHeight, camZ)
 
 			if line.y >= maxY {
 				continue
@@ -172,7 +180,7 @@ func main() {
 				pr = line
 			} else {
 				currentIdx := (count - 1) % maxRoadLen
-				pr = handleCam(roadLines[currentIdx], camX, camHeight, camZ)
+				pr = handleCam(roadLines[currentIdx], camX*RoadWidth, camHeight, camZ)
 			}
 
 			DrawPolygon(app, currentGrassColor, 0, int(pr.y), ScreenWidth, 0, int(line.y), ScreenWidth)
