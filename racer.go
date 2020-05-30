@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	sfml "github.com/manyminds/gosfml"
 	"runtime"
 )
@@ -10,12 +11,11 @@ import (
 //==========================================================
 
 var startPosition, currentPosition, speed = 0, 0, 0
-var maxRoadLen = 1600
 var camHeight, maxY float64
 var currentGrassColor, currentRumbleColor, currentRoadColor, currentBrokenLineColor sfml.Color
 var camX, camDx, camZ float64 = 0, 0.1, 0
 var pr RoadLine
-var roadLines []RoadLine
+var roadMap []RoadLine
 
 var SkyColor = sfml.Color{R: 182, G: 240, B: 255, A: 255}
 var RoadLightColor = sfml.Color{R: 73, G: 73, B: 73, A: 255}
@@ -36,6 +36,7 @@ const (
 	BitsPerPixel      = 24
 	Title             = "Racer 2.5D"
 	RoadWidth         = 2000
+	MaxRoadLen        = 1600
 	VisibleRoadLength = 300
 	SegmentLength     = 200
 	CamDepth          = 0.84
@@ -49,11 +50,11 @@ func RoundtoFloat(num int) float32 {
 type RoadLine struct {
 	_3dx, _3dy, _3dz float64
 	x, y, width      float64
-	scale            float64
+	scale, curve     float64
 }
 
 func NewRoadLine() *RoadLine {
-	return &RoadLine{_3dx: 0, _3dy: 0, _3dz: 0, x: 0, y: 0, width: 0, scale: 0}
+	return &RoadLine{_3dx: 0, _3dy: 0, _3dz: 0, x: 0, y: 0, width: 0, scale: 0, curve: 0}
 }
 
 func handleCam(line RoadLine, camX, camY, camZ float64) RoadLine {
@@ -62,6 +63,24 @@ func handleCam(line RoadLine, camX, camY, camZ float64) RoadLine {
 	line.y = (1 - line.scale*(line._3dy-camY)) * ScreenHeight / 2
 	line.width = line.scale * RoadWidth * ScreenWidth / 2
 	return line
+}
+
+func generateRoadMap(maxLength int) []RoadLine {
+	for count := 0; count < maxLength; count++ {
+		roadLine := NewRoadLine()
+		roadLine._3dz = float64(count * SegmentLength)
+
+		if count > 350 && count < 550 {
+			roadLine.curve = 0.3
+		}
+		if count > 600 && count < 950 {
+			roadLine.curve = -0.5
+		}
+
+		roadMap = append(roadMap, *roadLine)
+	}
+
+	return roadMap
 }
 
 func DrawPolygon(app *sfml.RenderWindow, color sfml.Color, bottomX, bottomY, bottomWidth, topX, topY, topWidth int) {
@@ -75,9 +94,30 @@ func DrawPolygon(app *sfml.RenderWindow, color sfml.Color, bottomX, bottomY, bot
 	app.Draw(shape, sfml.DefaultRenderStates())
 }
 
-func init() { runtime.LockOSThread() }
+func DrawStats(app *sfml.RenderWindow, txt string) {
+	font, _ := sfml.NewFontFromFile("assets/fonts/courier_prime/regular.ttf")
+	statsText, _ := sfml.NewText(font)
+	statsText.SetCharacterSize(16)
+	statsText.SetPosition(sfml.Vector2f{X: 5, Y: 5})
+	statsText.SetColor(sfml.ColorBlack())
+	statsText.SetString(txt)
+	app.Draw(statsText, sfml.DefaultRenderStates())
+}
+
+func init() {
+	runtime.LockOSThread()
+}
 
 func main() {
+
+	musicBuffer, err := sfml.NewSoundBufferFromFile("assets/music/racer.ogg")
+	music := sfml.NewSound(musicBuffer)
+	if err != nil {
+		panic(err)
+	}
+
+	music.Play()
+	music.SetLoop(true)
 
 	videoMode := sfml.VideoMode{
 		Width:        ScreenWidth,
@@ -89,21 +129,18 @@ func main() {
 
 	contextSettings := sfml.ContextSettings{
 		DepthBits:         BitsPerPixel,
-		StencilBits:       0,
-		AntialiasingLevel: 0,
+		StencilBits:       8,
+		AntialiasingLevel: 2,
 		MajorVersion:      0,
 		MinorVersion:      0,
 	}
 
 	app := sfml.NewRenderWindow(videoMode, Title, style, contextSettings)
-	app.SetFramerateLimit(60)
+	app.SetFramerateLimit(0)
 	app.SetMouseCursorVisible(false)
+	app.SetVSyncEnabled(true)
 
-	for count := 0; count < maxRoadLen; count++ {
-		roadLine := NewRoadLine()
-		roadLine._3dz = float64(count * SegmentLength)
-		roadLines = append(roadLines, *roadLine)
-	}
+	roadMap = generateRoadMap(MaxRoadLen)
 
 	for app.IsOpen() {
 		for event := app.PollEvent(); event != nil; event = app.PollEvent() {
@@ -120,41 +157,55 @@ func main() {
 
 		speed = 0
 
-		if sfml.KeyboardIsKeyPressed(sfml.KeyRight) {
-			camX += camDx
-		}
+		music.GetStatus()
 
-		if sfml.KeyboardIsKeyPressed(sfml.KeyLeft) {
-			camX -= camDx
-		}
+		if app.HasFocus() {
+			if sfml.KeyboardIsKeyPressed(sfml.KeyRight) {
+				camX += camDx
+			}
 
-		if sfml.KeyboardIsKeyPressed(sfml.KeyUp) {
-			speed = 150
-		}
+			if sfml.KeyboardIsKeyPressed(sfml.KeyLeft) {
+				camX -= camDx
+			}
 
-		if sfml.KeyboardIsKeyPressed(sfml.KeyDown) {
-			speed = -150
-		}
+			if sfml.KeyboardIsKeyPressed(sfml.KeyUp) {
+				speed = 150
+			}
 
-		app.Clear(SkyColor)
+			if sfml.KeyboardIsKeyPressed(sfml.KeyDown) {
+				speed = -150
+			}
+		}
 
 		maxY = ScreenHeight
-		var diff = 0
+		var diff, curveX, curveDx = 0, 0.0, 0.0
 		currentPosition += speed
+
+		for currentPosition >= MaxRoadLen*SegmentLength {
+			currentPosition -= MaxRoadLen * SegmentLength
+		}
+
+		for currentPosition < 0 {
+			currentPosition = startPosition
+		}
+
 		startPosition = currentPosition / SegmentLength
-		camHeight = roadLines[startPosition]._3dy + CamInitialHeight
+		camHeight = roadMap[startPosition]._3dy + CamInitialHeight
+
+		app.Clear(SkyColor)
+		DrawStats(app, fmt.Sprintf("CURRENT POSITION: %d\nDIRECTION: %f", currentPosition, camX))
 
 		for count := startPosition; count < startPosition+VisibleRoadLength; count++ {
 
-			if count >= maxRoadLen {
-				diff = maxRoadLen * SegmentLength
+			if count >= MaxRoadLen {
+				diff = MaxRoadLen*SegmentLength - SegmentLength
 			} else {
 				diff = 0
 			}
 
 			camZ = float64(startPosition*SegmentLength - diff)
 
-			line := handleCam(roadLines[count%maxRoadLen], camX*RoadWidth, camHeight, camZ)
+			line := handleCam(roadMap[count%MaxRoadLen], camX*RoadWidth-curveX, camHeight, camZ)
 
 			if line.y >= maxY {
 				continue
@@ -179,9 +230,12 @@ func main() {
 			if count == 0 {
 				pr = line
 			} else {
-				currentIdx := (count - 1) % maxRoadLen
-				pr = handleCam(roadLines[currentIdx], camX*RoadWidth, camHeight, camZ)
+				currentIdx := (count - 1) % MaxRoadLen
+				pr = handleCam(roadMap[currentIdx], camX*RoadWidth-curveX, camHeight, camZ)
 			}
+
+			curveX += curveDx
+			curveDx += line.curve
 
 			DrawPolygon(app, currentGrassColor, 0, int(pr.y), ScreenWidth, 0, int(line.y), ScreenWidth)
 			DrawPolygon(app, currentRumbleColor, int(pr.x), int(pr.y), int(pr.width*1.2), int(line.x), int(line.y), int(line.width*1.2))
