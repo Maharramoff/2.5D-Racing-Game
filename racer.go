@@ -12,7 +12,7 @@ import (
 var startPosition, currentPosition, speed = 0, 0, 0
 var maxRoadLen = 1600
 var camHeight, maxY float64
-var grassColor, rumbleColor, roadColor sfml.Color
+var currentGrassColor, currentRumbleColor, currentRoadColor, currentBrokenLineColor sfml.Color
 var camX, camZ float64 = 0, 0
 var pr RoadLine
 var roadLines []RoadLine
@@ -24,6 +24,7 @@ var GrassDarkColor = sfml.Color{R: 16, G: 154, B: 16, A: 255}
 var GrassLightColor = sfml.Color{R: 16, G: 170, B: 16, A: 255}
 var RumbleDarkColor = sfml.Color{R: 192, G: 78, B: 73, A: 255}
 var RumblightColor = sfml.Color{R: 210, G: 210, B: 210, A: 255}
+var BrokenLineColor = sfml.Color{R: 210, G: 210, B: 210, A: 255}
 
 //==========================================================
 // GAME CONSTANTS
@@ -152,17 +153,19 @@ func main() {
 			}
 			maxY = line.y
 
-			grassColor = GrassDarkColor
-			rumbleColor = RumbleDarkColor
-			roadColor = RoadDarkColor
+			currentGrassColor = GrassDarkColor
+			currentRumbleColor = RumbleDarkColor
+			currentRoadColor = RoadDarkColor
+			currentBrokenLineColor = sfml.Color{}
 
 			if (count/6)%2 == 0 {
-				grassColor = GrassLightColor
+				currentGrassColor = GrassLightColor
+				currentBrokenLineColor = BrokenLineColor
 			}
 
 			if (count/3)%2 == 0 {
-				rumbleColor = RumblightColor
-				roadColor = RoadLightColor
+				currentRumbleColor = RumblightColor
+				currentRoadColor = RoadLightColor
 			}
 
 			if count == 0 {
@@ -172,9 +175,10 @@ func main() {
 				pr = handleCam(roadLines[currentIdx], camX, camHeight, camZ)
 			}
 
-			DrawPolygon(app, grassColor, 0, int(pr.y), ScreenWidth, 0, int(line.y), ScreenWidth)
-			DrawPolygon(app, rumbleColor, int(pr.x), int(pr.y), int(pr.width*1.2), int(line.x), int(line.y), int(line.width*1.2))
-			DrawPolygon(app, roadColor, int(pr.x), int(pr.y), int(pr.width), int(line.x), int(line.y), int(line.width))
+			DrawPolygon(app, currentGrassColor, 0, int(pr.y), ScreenWidth, 0, int(line.y), ScreenWidth)
+			DrawPolygon(app, currentRumbleColor, int(pr.x), int(pr.y), int(pr.width*1.2), int(line.x), int(line.y), int(line.width*1.2))
+			DrawPolygon(app, currentRoadColor, int(pr.x), int(pr.y), int(pr.width), int(line.x), int(line.y), int(line.width))
+			DrawPolygon(app, currentBrokenLineColor, int(pr.x), int(pr.y), int(pr.width*0.03), int(line.x), int(line.y), int(line.width*0.03))
 
 		}
 
