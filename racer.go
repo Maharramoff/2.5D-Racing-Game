@@ -116,8 +116,8 @@ func main() {
 		panic(err)
 	}
 
-	music.Play()
 	music.SetLoop(true)
+	music.Play()
 
 	videoMode := sfml.VideoMode{
 		Width:        ScreenWidth,
@@ -139,6 +139,12 @@ func main() {
 	app.SetFramerateLimit(0)
 	app.SetMouseCursorVisible(false)
 	app.SetVSyncEnabled(true)
+	icon, _ := sfml.NewImageFromFile("assets/images/game_icon.png")
+
+	err = app.SetIcon(128, 128, icon.GetPixelData())
+	if err != nil {
+		panic(err)
+	}
 
 	roadMap = generateRoadMap(MaxRoadLen)
 
@@ -243,7 +249,6 @@ func main() {
 			DrawPolygon(app, currentBrokenLineColor, int(pr.x), int(pr.y), int(pr.width*0.03), int(line.x), int(line.y), int(line.width*0.03))
 
 		}
-
 		app.Display()
 	}
 }
