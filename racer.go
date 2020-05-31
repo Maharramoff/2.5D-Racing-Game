@@ -12,11 +12,21 @@ import (
 // GAME VARIABLES
 //==========================================================
 
-var startPosition, currentPosition, speed, currentLap = 0, 0, 0, 1
-var camHeight, maxY float32
-var deltaTime float64
-var currentGrassColor, currentRumbleColor, currentRoadColor, currentBrokenLineColor sfml.Color
-var camX, camDx, camZ, playerZ, camDepth float32 = 0, 0.1, 0, 0.0, 0.0
+var startPosition = 0
+var currentPosition = 0
+var currentLap = 1
+var camHeight float32
+var maxY float32 = 0
+var speed float32 = 0.0
+var maxSpeed float32 = 300.0
+var accelerationRate = maxSpeed / 5
+var speedPercent float32 = 0
+var deltaTime float32
+var camX float32 = 0
+var camDx float32 = 0.1
+var camZ float32 = 0
+var playerZ float32 = 0
+var camDepth float32 = 0
 var pr, playerSegment RoadLine
 var roadMap []RoadLine
 var playerRiding = false
@@ -26,6 +36,7 @@ var carRideDim = sfml.IntRect{Left: 8, Top: 9, Width: 52, Height: 31}
 var carDimLeft = sfml.IntRect{Left: 72, Top: 9, Width: 57, Height: 31}
 var carDimRight = sfml.IntRect{Left: 879, Top: 9, Width: 57, Height: 31}
 
+var currentGrassColor, currentRumbleColor, currentRoadColor, currentBrokenLineColor sfml.Color
 var SkyColor = sfml.Color{R: 182, G: 240, B: 255, A: 255}
 var RoadLightColor = sfml.Color{R: 73, G: 73, B: 73, A: 255}
 var RoadDarkColor = sfml.Color{R: 70, G: 70, B: 70, A: 255}
@@ -128,6 +139,7 @@ func init() {
 
 func main() {
 
+	runtime.UnlockOSThread()
 	musicBuffer, err := sfml.NewSoundBufferFromFile("assets/music/boxcat_games_-_tricks.ogg")
 	music := sfml.NewSound(musicBuffer)
 	if err != nil {
@@ -136,6 +148,7 @@ func main() {
 
 	music.SetLoop(true)
 	music.Play()
+	runtime.LockOSThread()
 
 	videoMode := sfml.VideoMode{
 		Width:        ScreenWidth,
@@ -183,6 +196,8 @@ func main() {
 	roadMap = generateRoadMap(MaxRoadLen)
 
 	lastTime := time.Now()
+	speed = 0.0
+	breaking := -maxSpeed
 
 	for app.IsOpen() {
 		app.SetActive(true)
@@ -201,26 +216,25 @@ func main() {
 		}
 
 		now := time.Now()
-		deltaTime = time.Since(lastTime).Seconds() * 1000
-		speed = 0
-
+		deltaTime = float32(time.Since(lastTime).Seconds())
 		music.GetStatus()
-
 		playerRiding = false
 
 		if app.HasFocus() {
 
 			if sfml.KeyboardIsKeyPressed(sfml.KeyUp) {
-				speed = 150
+				speed += accelerationRate*deltaTime - (speed * .003)
 				carSprite.SetTextureRect(carRideDim)
 				playerRiding = true
 			}
 
 			if sfml.KeyboardIsKeyPressed(sfml.KeyDown) {
-				speed = -150
+				speed += breaking * deltaTime
 				carSprite.SetTextureRect(carRideDim)
 				playerRiding = true
 			}
+			speedPercent = speed / maxSpeed
+			camDx = deltaTime * speedPercent * 2.0
 
 			if sfml.KeyboardIsKeyPressed(sfml.KeyRight) {
 				camX += camDx
@@ -233,9 +247,12 @@ func main() {
 			}
 		}
 
+		// Speed limit
+		speed = float32(math.Max(0, math.Min(float64(speed), float64(maxSpeed))))
+
 		maxY = ScreenHeight
 		var diff, curveX, curveDx float32 = 0, 0.0, 0.0
-		currentPosition += speed
+		currentPosition += int(speed)
 
 		for currentPosition >= MaxRoadLen*SegmentLength {
 			currentPosition -= MaxRoadLen * SegmentLength
@@ -311,9 +328,19 @@ func main() {
 		lastTime = now
 		carSprite.SetPosition(carPos)
 		app.Draw(carSprite, sfml.DefaultRenderStates())
-		DrawStats(app, fmt.Sprintf("LAP: %d/%d", currentLap, MaxLaps), 20, 20)
-		DrawStats(app, fmt.Sprintf("PLAYER_X: %d", int(carPos.X)), 20, 40)
-		DrawStats(app, fmt.Sprintf("DELTATIME: %v", RoundtoDec(deltaTime, 2)), 20, 60)
+		DrawStats(
+			app,
+			fmt.Sprintf(
+				"LAP: %d/%d\nFPS: %v\nSPEED:\t%v\nDELTATIME: %v",
+				currentLap,
+				MaxLaps,
+				RoundtoDec(float64(1/deltaTime), 1),
+				RoundtoDec(float64(speed), 1),
+				RoundtoDec(float64(deltaTime*1000), 1),
+			),
+			20,
+			20,
+		)
 		app.Display()
 	}
 }
