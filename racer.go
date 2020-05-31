@@ -20,8 +20,11 @@ var maxY float32 = 0
 var speed float32 = 0.0
 var maxSpeed float32 = 300.0
 var accelerationRate = maxSpeed / 5
+var decelerationRate = -maxSpeed / 5
 var speedPercent float32 = 0
 var deltaTime float32
+var lastDeltaTime float32 = 0
+var lastFrameRate int = 0
 var camX float32 = 0
 var camDx float32 = 0.1
 var camZ float32 = 0
@@ -29,7 +32,6 @@ var playerZ float32 = 0
 var camDepth float32 = 0
 var pr, playerSegment RoadLine
 var roadMap []RoadLine
-var playerRiding = false
 var carPos, carScale = sfml.Vector2f{X: 0, Y: 0}, sfml.Vector2f{X: 4.0, Y: 4.0}
 var carDim = sfml.IntRect{Left: 136, Top: 89, Width: 52, Height: 31}
 var carRideDim = sfml.IntRect{Left: 8, Top: 9, Width: 52, Height: 31}
@@ -123,10 +125,10 @@ func DrawPolygon(app *sfml.RenderWindow, color sfml.Color, bottomX, bottomY, bot
 	app.Draw(shape, sfml.DefaultRenderStates())
 }
 
-func DrawStats(app *sfml.RenderWindow, txt string, x, y float32) {
+func DrawStats(app *sfml.RenderWindow, txt string, fontSize uint, x, y float32) {
 	font, _ := sfml.NewFontFromFile("assets/fonts/faster_one/regular.ttf")
 	statsText, _ := sfml.NewText(font)
-	statsText.SetCharacterSize(20)
+	statsText.SetCharacterSize(fontSize)
 	statsText.SetPosition(sfml.Vector2f{X: x, Y: y})
 	statsText.SetColor(sfml.ColorBlack())
 	statsText.SetString(txt)
@@ -198,6 +200,7 @@ func main() {
 	lastTime := time.Now()
 	speed = 0.0
 	breaking := -maxSpeed
+	statsUpdateTime := 0
 
 	for app.IsOpen() {
 		app.SetActive(true)
@@ -217,22 +220,21 @@ func main() {
 
 		now := time.Now()
 		deltaTime = float32(time.Since(lastTime).Seconds())
+		fps := int(1 / deltaTime)
 		music.GetStatus()
-		playerRiding = false
 
 		if app.HasFocus() {
 
 			if sfml.KeyboardIsKeyPressed(sfml.KeyUp) {
 				speed += accelerationRate*deltaTime - (speed * .003)
 				carSprite.SetTextureRect(carRideDim)
-				playerRiding = true
-			}
-
-			if sfml.KeyboardIsKeyPressed(sfml.KeyDown) {
+			} else if sfml.KeyboardIsKeyPressed(sfml.KeyDown) {
 				speed += breaking * deltaTime
 				carSprite.SetTextureRect(carRideDim)
-				playerRiding = true
+			} else {
+				speed += decelerationRate * deltaTime
 			}
+
 			speedPercent = speed / maxSpeed
 			camDx = deltaTime * speedPercent * 2.0
 
@@ -268,7 +270,7 @@ func main() {
 		camHeight = roadMap[startPosition]._3dy + CamInitialHeight
 		playerZ = camHeight * camDepth
 
-		if playerRiding {
+		if speed > 0 {
 			playerSegment = roadMap[(startPosition+int(playerZ/SegmentLength))%len(roadMap)]
 			if speed > 0 {
 				camX -= camDx * speedPercent * playerSegment.curve * PlayerCentrifugalForce
@@ -328,19 +330,20 @@ func main() {
 		lastTime = now
 		carSprite.SetPosition(carPos)
 		app.Draw(carSprite, sfml.DefaultRenderStates())
-		DrawStats(
-			app,
-			fmt.Sprintf(
-				"LAP: %d/%d\nFPS: %v\nSPEED:\t%v\nDELTA: %v",
-				currentLap,
-				MaxLaps,
-				RoundtoDec(float64(1/deltaTime), 1),
-				RoundtoDec(float64(speed), 1),
-				RoundtoDec(float64(deltaTime*1000), 1),
-			),
-			20,
-			20,
-		)
+
+		statsUpdateTime--
+
+		if statsUpdateTime <= 0 {
+			lastDeltaTime = deltaTime
+			lastFrameRate = fps
+			statsUpdateTime = 20
+		}
+
+		DrawStats(app, fmt.Sprintf("FPS: %v\nDELTA: %v", lastFrameRate, int(lastDeltaTime*1000)), 24, 20, 20)
+		DrawStats(app, fmt.Sprintf("LAP: %d/%d\nSPEED: %03d", currentLap, MaxLaps, int(speed)), 24, 740, 20)
+		DrawStats(app, fmt.Sprintf("KM/H"), 16, 910, 50)
+
 		app.Display()
+		app.SetActive(false)
 	}
 }
