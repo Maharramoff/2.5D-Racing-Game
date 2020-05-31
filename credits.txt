@@ -24,3 +24,14 @@ License:
     Free for personal use
 Credit:
     iynque (Andrew Williams)
+
+
+spritesheet.png
+---------------------------
+
+Source:
+    https://www.spriters-resource.com/genesis_32x_scd/topgear2/sheet/36656/
+License:
+    Free for personal use
+Credit:
+    https://www.spriters-resource.com/submitter/Yawackhary/
