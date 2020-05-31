@@ -24,7 +24,7 @@ var decelerationRate = -maxSpeed / 5
 var speedPercent float32 = 0
 var deltaTime float32
 var lastDeltaTime float32 = 0
-var lastFrameRate int = 0
+var lastFrameRate = 0
 var camX float32 = 0
 var camDx float32 = 0.1
 var camZ float32 = 0
@@ -39,7 +39,7 @@ var carDimLeft = sfml.IntRect{Left: 72, Top: 9, Width: 57, Height: 31}
 var carDimRight = sfml.IntRect{Left: 879, Top: 9, Width: 57, Height: 31}
 
 var currentGrassColor, currentRumbleColor, currentRoadColor, currentBrokenLineColor sfml.Color
-var SkyColor = sfml.Color{R: 182, G: 240, B: 255, A: 255}
+var SkyColor = sfml.Color{R: 132, G: 228, B: 247, A: 255}
 var RoadLightColor = sfml.Color{R: 73, G: 73, B: 73, A: 255}
 var RoadDarkColor = sfml.Color{R: 70, G: 70, B: 70, A: 255}
 var GrassDarkColor = sfml.Color{R: 16, G: 154, B: 16, A: 255}
@@ -130,7 +130,12 @@ func DrawStats(app *sfml.RenderWindow, txt string, fontSize uint, x, y float32) 
 	statsText, _ := sfml.NewText(font)
 	statsText.SetCharacterSize(fontSize)
 	statsText.SetPosition(sfml.Vector2f{X: x, Y: y})
-	statsText.SetColor(sfml.ColorBlack())
+	statsText.SetColor(sfml.Color{
+		R: 26,
+		G: 45,
+		B: 49,
+		A: 255,
+	})
 	statsText.SetString(txt)
 	app.Draw(statsText, sfml.DefaultRenderStates())
 }
@@ -142,15 +147,32 @@ func init() {
 func main() {
 
 	runtime.UnlockOSThread()
-	musicBuffer, err := sfml.NewSoundBufferFromFile("assets/music/boxcat_games_-_tricks.ogg")
+	musicBuffer, err := sfml.NewSoundBufferFromFile("assets/sounds/boxcat_games_-_tricks.ogg")
 	music := sfml.NewSound(musicBuffer)
 	if err != nil {
 		panic(err)
 	}
 
 	music.SetLoop(true)
+	music.SetVolume(20)
 	music.Play()
 	runtime.LockOSThread()
+
+	engineSoundBuffer, err := sfml.NewSoundBufferFromFile("assets/sounds/engine-sound.ogg")
+	engineSound := sfml.NewSound(engineSoundBuffer)
+	if err != nil {
+		panic(err)
+	}
+	engineSound.SetVolume(75.0)
+
+	drivingSoundBuffer, err := sfml.NewSoundBufferFromFile("assets/sounds/driving.ogg")
+	drivingSound := sfml.NewSound(drivingSoundBuffer)
+	if err != nil {
+		panic(err)
+	}
+
+	drivingSound.SetLoop(true)
+	drivingSound.SetVolume(40.0)
 
 	videoMode := sfml.VideoMode{
 		Width:        ScreenWidth,
@@ -158,7 +180,7 @@ func main() {
 		BitsPerPixel: BitsPerPixel,
 	}
 
-	style := sfml.StyleDefault
+	style := sfml.StyleClose
 
 	contextSettings := sfml.ContextSettings{
 		DepthBits:         BitsPerPixel,
@@ -201,6 +223,7 @@ func main() {
 	speed = 0.0
 	breaking := -maxSpeed
 	statsUpdateTime := 0
+	engineSoundPlayed := false
 
 	for app.IsOpen() {
 		app.SetActive(true)
@@ -228,11 +251,27 @@ func main() {
 			if sfml.KeyboardIsKeyPressed(sfml.KeyUp) {
 				speed += accelerationRate*deltaTime - (speed * .003)
 				carSprite.SetTextureRect(carRideDim)
+
+				if engineSoundPlayed == false {
+					drivingSound.Stop()
+					engineSound.Play()
+					engineSoundPlayed = true
+				} else {
+					if drivingSound.GetStatus() != sfml.SoundStatusPlaying && engineSound.GetStatus() == sfml.SoundStatusStopped {
+						drivingSound.Play()
+					}
+				}
+
 			} else if sfml.KeyboardIsKeyPressed(sfml.KeyDown) {
 				speed += breaking * deltaTime
 				carSprite.SetTextureRect(carRideDim)
 			} else {
 				speed += decelerationRate * deltaTime
+			}
+
+			if speed > 0 && speed < 10 && engineSoundPlayed {
+				engineSoundPlayed = false
+				drivingSound.Stop()
 			}
 
 			speedPercent = speed / maxSpeed
@@ -339,9 +378,9 @@ func main() {
 			statsUpdateTime = 20
 		}
 
-		DrawStats(app, fmt.Sprintf("FPS: %v\nDELTA: %v", lastFrameRate, int(lastDeltaTime*1000)), 24, 20, 20)
-		DrawStats(app, fmt.Sprintf("LAP: %d/%d\nSPEED: %03d", currentLap, MaxLaps, int(speed)), 24, 740, 20)
-		DrawStats(app, fmt.Sprintf("KM/H"), 16, 910, 50)
+		DrawStats(app, fmt.Sprintf("FPS: %v\nDELTA: %v", lastFrameRate, int(lastDeltaTime*1000)), 24, 20, 12)
+		DrawStats(app, fmt.Sprintf("LAP: %d/%d\nSPEED: %03d", currentLap, MaxLaps, int(speed)), 24, 780, 12)
+		DrawStats(app, fmt.Sprintf("KM/H"), 16, 950, 42)
 
 		app.Display()
 		app.SetActive(false)
