@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	sfml "github.com/manyminds/gosfml"
+	"math"
 	"runtime"
 )
 
@@ -11,11 +12,12 @@ import (
 //==========================================================
 
 var startPosition, currentPosition, speed, currentLap = 0, 0, 0, 1
-var camHeight, maxY float64
+var camHeight, maxY float32
 var currentGrassColor, currentRumbleColor, currentRoadColor, currentBrokenLineColor sfml.Color
-var camX, camDx, camZ float64 = 0, 0.1, 0
-var pr RoadLine
+var camX, camDx, camZ, playerZ, camDepth float32 = 0, 0.1, 0, 0.0, 0.0
+var pr, playerSegment RoadLine
 var roadMap []RoadLine
+var playerRiding = false
 var carPos, carScale = sfml.Vector2f{X: 0, Y: 0}, sfml.Vector2f{X: 4.0, Y: 4.0}
 var carDim = sfml.IntRect{Left: 136, Top: 89, Width: 52, Height: 31}
 var carRideDim = sfml.IntRect{Left: 8, Top: 9, Width: 52, Height: 31}
@@ -36,17 +38,17 @@ var BrokenLineColor = sfml.Color{R: 210, G: 210, B: 210, A: 255}
 //==========================================================
 
 const (
-	ScreenWidth       = 1024
-	ScreenHeight      = 768
-	BitsPerPixel      = 24
-	Title             = "Racer 2.5D"
-	RoadWidth         = 2000
-	MaxRoadLen        = 1600
-	VisibleRoadLength = 300
-	SegmentLength     = 200
-	CamDepth          = 0.84
-	CamInitialHeight  = CamDepth * 1750
-	MaxLaps           = 3
+	ScreenWidth            = 1024
+	ScreenHeight           = 768
+	BitsPerPixel           = 24
+	Title                  = "Racer 2.5D"
+	RoadWidth              = 2000
+	MaxRoadLen             = 1600
+	VisibleRoadLength      = 300
+	SegmentLength          = 200
+	CamInitialHeight       = 1000
+	MaxLaps                = 3
+	PlayerCentrifugalForce = 0.15
 )
 
 func RoundtoFloat(num int) float32 {
@@ -54,19 +56,23 @@ func RoundtoFloat(num int) float32 {
 }
 
 type RoadLine struct {
-	_3dx, _3dy, _3dz float64
-	x, y, width      float64
-	scale, curve     float64
+	_3dx, _3dy, _3dz float32
+	camX, camY, camZ float32
+	x, y, width      float32
+	scale, curve     float32
 }
 
 func NewRoadLine() *RoadLine {
-	return &RoadLine{_3dx: 0, _3dy: 0, _3dz: 0, x: 0, y: 0, width: 0, scale: 0, curve: 0}
+	return &RoadLine{_3dx: 0, _3dy: 0, _3dz: 0, camX: 0, camY: 0, camZ: 0, x: 0, y: 0, width: 0, scale: 0, curve: 0}
 }
 
-func handleCam(line RoadLine, camX, camY, camZ float64) RoadLine {
-	line.scale = CamDepth / (line._3dz - camZ)
-	line.x = (1 + line.scale*(line._3dx-camX)) * ScreenWidth / 2
-	line.y = (1 - line.scale*(line._3dy-camY)) * ScreenHeight / 2
+func handleCam(line RoadLine, camX, camY, camZ, camDepth float32) RoadLine {
+	line.camX = line._3dx - camX
+	line.camY = line._3dy - camY
+	line.camZ = line._3dz - camZ
+	line.scale = camDepth / line.camZ
+	line.x = (1 + line.scale*line.camX) * ScreenWidth / 2
+	line.y = (1 - line.scale*line.camY) * ScreenHeight / 2
 	line.width = line.scale * RoadWidth * ScreenWidth / 2
 	return line
 }
@@ -74,7 +80,7 @@ func handleCam(line RoadLine, camX, camY, camZ float64) RoadLine {
 func generateRoadMap(maxLength int) []RoadLine {
 	for count := 0; count < maxLength; count++ {
 		roadLine := NewRoadLine()
-		roadLine._3dz = float64(count * SegmentLength)
+		roadLine._3dz = float32(count * SegmentLength)
 
 		if count > 350 && count < 550 {
 			roadLine.curve = 0.3
@@ -100,11 +106,11 @@ func DrawPolygon(app *sfml.RenderWindow, color sfml.Color, bottomX, bottomY, bot
 	app.Draw(shape, sfml.DefaultRenderStates())
 }
 
-func DrawStats(app *sfml.RenderWindow, txt string) {
+func DrawStats(app *sfml.RenderWindow, txt string, x, y float32) {
 	font, _ := sfml.NewFontFromFile("assets/fonts/faster_one/regular.ttf")
 	statsText, _ := sfml.NewText(font)
 	statsText.SetCharacterSize(30)
-	statsText.SetPosition(sfml.Vector2f{X: ScreenWidth - 90, Y: 20})
+	statsText.SetPosition(sfml.Vector2f{X: x, Y: y})
 	statsText.SetColor(sfml.ColorBlack())
 	statsText.SetString(txt)
 	app.Draw(statsText, sfml.DefaultRenderStates())
@@ -166,6 +172,8 @@ func main() {
 
 	carSprite.SetScale(carScale)
 	carSprite.SetTextureRect(carDim)
+	carPos.X = ScreenWidth/2 - carSprite.GetGlobalBounds().Width + carSprite.GetGlobalBounds().Width/2
+	carPos.Y = ScreenHeight - carSprite.GetGlobalBounds().Height - 10
 
 	roadMap = generateRoadMap(MaxRoadLen)
 
@@ -189,16 +197,20 @@ func main() {
 
 		music.GetStatus()
 
+		playerRiding = false
+
 		if app.HasFocus() {
 
 			if sfml.KeyboardIsKeyPressed(sfml.KeyUp) {
 				speed = 150
 				carSprite.SetTextureRect(carRideDim)
+				playerRiding = true
 			}
 
 			if sfml.KeyboardIsKeyPressed(sfml.KeyDown) {
 				speed = -150
 				carSprite.SetTextureRect(carRideDim)
+				playerRiding = true
 			}
 
 			if sfml.KeyboardIsKeyPressed(sfml.KeyRight) {
@@ -212,11 +224,8 @@ func main() {
 			}
 		}
 
-		carPos.X = ScreenWidth/2 - carSprite.GetGlobalBounds().Width + carSprite.GetGlobalBounds().Width/2
-		carPos.Y = ScreenHeight - carSprite.GetGlobalBounds().Height - 10
-
 		maxY = ScreenHeight
-		var diff, curveX, curveDx = 0, 0.0, 0.0
+		var diff, curveX, curveDx float32 = 0, 0.0, 0.0
 		currentPosition += speed
 
 		for currentPosition >= MaxRoadLen*SegmentLength {
@@ -228,11 +237,23 @@ func main() {
 			currentPosition = startPosition
 		}
 
+		camDepth = float32(1 / math.Tan((50)*math.Pi/180))
 		startPosition = currentPosition / SegmentLength
 		camHeight = roadMap[startPosition]._3dy + CamInitialHeight
+		playerZ = camHeight * camDepth
+
+		if playerRiding {
+			playerSegment = roadMap[(startPosition+int(playerZ/SegmentLength))%len(roadMap)]
+			if speed > 0 {
+				camX -= camDx * playerSegment.curve * PlayerCentrifugalForce
+			} else {
+				camX -= -camDx * playerSegment.curve * PlayerCentrifugalForce
+			}
+		}
 
 		app.Clear(SkyColor)
-		DrawStats(app, fmt.Sprintf("LAP\n%d/%d", currentLap, MaxLaps))
+		DrawStats(app, fmt.Sprintf("%d/%d", currentLap, MaxLaps), 20, 20)
+		DrawStats(app, fmt.Sprintf("PLAYER_X: %d", int(carPos.X)), 750, 20)
 
 		for count := startPosition; count < startPosition+VisibleRoadLength; count++ {
 
@@ -242,9 +263,9 @@ func main() {
 				diff = 0
 			}
 
-			camZ = float64(startPosition*SegmentLength - diff)
+			camZ = float32(startPosition*SegmentLength) - diff
 
-			line := handleCam(roadMap[count%MaxRoadLen], camX*RoadWidth-curveX, camHeight, camZ)
+			line := handleCam(roadMap[count%MaxRoadLen], camX*RoadWidth-curveX, camHeight, camZ, camDepth)
 
 			if line.y >= maxY {
 				continue
@@ -270,16 +291,16 @@ func main() {
 				pr = line
 			} else {
 				currentIdx := (count - 1) % MaxRoadLen
-				pr = handleCam(roadMap[currentIdx], camX*RoadWidth-curveX, camHeight, camZ)
+				pr = handleCam(roadMap[currentIdx], camX*RoadWidth-curveX, camHeight, camZ, camDepth)
 			}
-
-			curveX += curveDx
-			curveDx += line.curve
 
 			DrawPolygon(app, currentGrassColor, 0, int(pr.y), ScreenWidth, 0, int(line.y), ScreenWidth)
 			DrawPolygon(app, currentRumbleColor, int(pr.x), int(pr.y), int(pr.width*1.2), int(line.x), int(line.y), int(line.width*1.2))
 			DrawPolygon(app, currentRoadColor, int(pr.x), int(pr.y), int(pr.width), int(line.x), int(line.y), int(line.width))
 			DrawPolygon(app, currentBrokenLineColor, int(pr.x), int(pr.y), int(pr.width*0.03), int(line.x), int(line.y), int(line.width*0.03))
+
+			curveX += curveDx
+			curveDx += line.curve
 
 		}
 		carSprite.SetPosition(carPos)
