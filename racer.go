@@ -18,6 +18,9 @@ var pr RoadLine
 var roadMap []RoadLine
 var carPos, carScale = sfml.Vector2f{X: 0, Y: 0}, sfml.Vector2f{X: 4.0, Y: 4.0}
 var carDim = sfml.IntRect{Left: 136, Top: 89, Width: 52, Height: 31}
+var carRideDim = sfml.IntRect{Left: 8, Top: 9, Width: 52, Height: 31}
+var carDimLeft = sfml.IntRect{Left: 72, Top: 9, Width: 57, Height: 31}
+var carDimRight = sfml.IntRect{Left: 879, Top: 9, Width: 57, Height: 31}
 
 var SkyColor = sfml.Color{R: 182, G: 240, B: 255, A: 255}
 var RoadLightColor = sfml.Color{R: 73, G: 73, B: 73, A: 255}
@@ -142,6 +145,7 @@ func main() {
 	app.SetFramerateLimit(0)
 	app.SetMouseCursorVisible(false)
 	app.SetVSyncEnabled(true)
+	app.SetActive(false)
 	icon, _ := sfml.NewImageFromFile("assets/images/game_icon.png")
 
 	err = app.SetIcon(128, 128, icon.GetPixelData())
@@ -149,7 +153,7 @@ func main() {
 		panic(err)
 	}
 
-	texture, err := sfml.NewTextureFromFile("assets/images/game.png", nil)
+	texture, err := sfml.NewTextureFromFile("assets/images/spritesheet.png", nil)
 	if err != nil {
 		panic(err)
 	}
@@ -160,20 +164,21 @@ func main() {
 		panic(err)
 	}
 
-	carSprite.SetTextureRect(carDim)
 	carSprite.SetScale(carScale)
-	carPos.X = ScreenWidth/2 - carSprite.GetGlobalBounds().Width + carSprite.GetGlobalBounds().Width/2
-	carPos.Y = ScreenHeight - carSprite.GetGlobalBounds().Height - 10
+	carSprite.SetTextureRect(carDim)
 
 	roadMap = generateRoadMap(MaxRoadLen)
 
 	for app.IsOpen() {
+		app.SetActive(true)
 		for event := app.PollEvent(); event != nil; event = app.PollEvent() {
 			switch eventType := event.(type) {
 			case sfml.EventKeyReleased:
 				switch eventType.Code {
 				case sfml.KeyEscape:
 					app.Close()
+				case sfml.KeyLeft, sfml.KeyRight, sfml.KeyUp, sfml.KeyDown:
+					carSprite.SetTextureRect(carDim)
 				}
 			case sfml.EventClosed:
 				app.Close()
@@ -185,22 +190,30 @@ func main() {
 		music.GetStatus()
 
 		if app.HasFocus() {
-			if sfml.KeyboardIsKeyPressed(sfml.KeyRight) {
-				camX += camDx
-			}
-
-			if sfml.KeyboardIsKeyPressed(sfml.KeyLeft) {
-				camX -= camDx
-			}
 
 			if sfml.KeyboardIsKeyPressed(sfml.KeyUp) {
 				speed = 150
+				carSprite.SetTextureRect(carRideDim)
 			}
 
 			if sfml.KeyboardIsKeyPressed(sfml.KeyDown) {
 				speed = -150
+				carSprite.SetTextureRect(carRideDim)
+			}
+
+			if sfml.KeyboardIsKeyPressed(sfml.KeyRight) {
+				camX += camDx
+				carSprite.SetTextureRect(carDimRight)
+			}
+
+			if sfml.KeyboardIsKeyPressed(sfml.KeyLeft) {
+				camX -= camDx
+				carSprite.SetTextureRect(carDimLeft)
 			}
 		}
+
+		carPos.X = ScreenWidth/2 - carSprite.GetGlobalBounds().Width + carSprite.GetGlobalBounds().Width/2
+		carPos.Y = ScreenHeight - carSprite.GetGlobalBounds().Height - 10
 
 		maxY = ScreenHeight
 		var diff, curveX, curveDx = 0, 0.0, 0.0
