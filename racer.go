@@ -5,6 +5,7 @@ import (
 	sfml "github.com/manyminds/gosfml"
 	"math"
 	"runtime"
+	"time"
 )
 
 //==========================================================
@@ -13,6 +14,7 @@ import (
 
 var startPosition, currentPosition, speed, currentLap = 0, 0, 0, 1
 var camHeight, maxY float32
+var deltaTime float64
 var currentGrassColor, currentRumbleColor, currentRoadColor, currentBrokenLineColor sfml.Color
 var camX, camDx, camZ, playerZ, camDepth float32 = 0, 0.1, 0, 0.0, 0.0
 var pr, playerSegment RoadLine
@@ -53,6 +55,10 @@ const (
 
 func RoundtoFloat(num int) float32 {
 	return float32(num)
+}
+
+func RoundtoDec(num float64, dec int) float64 {
+	return math.Round(num*math.Pow10(dec)) / math.Pow10(dec)
 }
 
 type RoadLine struct {
@@ -109,7 +115,7 @@ func DrawPolygon(app *sfml.RenderWindow, color sfml.Color, bottomX, bottomY, bot
 func DrawStats(app *sfml.RenderWindow, txt string, x, y float32) {
 	font, _ := sfml.NewFontFromFile("assets/fonts/faster_one/regular.ttf")
 	statsText, _ := sfml.NewText(font)
-	statsText.SetCharacterSize(30)
+	statsText.SetCharacterSize(20)
 	statsText.SetPosition(sfml.Vector2f{X: x, Y: y})
 	statsText.SetColor(sfml.ColorBlack())
 	statsText.SetString(txt)
@@ -142,13 +148,12 @@ func main() {
 	contextSettings := sfml.ContextSettings{
 		DepthBits:         BitsPerPixel,
 		StencilBits:       8,
-		AntialiasingLevel: 2,
+		AntialiasingLevel: 0,
 		MajorVersion:      0,
 		MinorVersion:      0,
 	}
 
 	app := sfml.NewRenderWindow(videoMode, Title, style, contextSettings)
-	app.SetFramerateLimit(0)
 	app.SetMouseCursorVisible(false)
 	app.SetVSyncEnabled(true)
 	app.SetActive(false)
@@ -177,6 +182,8 @@ func main() {
 
 	roadMap = generateRoadMap(MaxRoadLen)
 
+	lastTime := time.Now()
+
 	for app.IsOpen() {
 		app.SetActive(true)
 		for event := app.PollEvent(); event != nil; event = app.PollEvent() {
@@ -193,6 +200,8 @@ func main() {
 			}
 		}
 
+		now := time.Now()
+		deltaTime = time.Since(lastTime).Seconds() * 1000
 		speed = 0
 
 		music.GetStatus()
@@ -252,9 +261,6 @@ func main() {
 		}
 
 		app.Clear(SkyColor)
-		DrawStats(app, fmt.Sprintf("%d/%d", currentLap, MaxLaps), 20, 20)
-		DrawStats(app, fmt.Sprintf("PLAYER_X: %d", int(carPos.X)), 750, 20)
-
 		for count := startPosition; count < startPosition+VisibleRoadLength; count++ {
 
 			if count >= MaxRoadLen {
@@ -301,10 +307,13 @@ func main() {
 
 			curveX += curveDx
 			curveDx += line.curve
-
 		}
+		lastTime = now
 		carSprite.SetPosition(carPos)
 		app.Draw(carSprite, sfml.DefaultRenderStates())
+		DrawStats(app, fmt.Sprintf("LAP: %d/%d", currentLap, MaxLaps), 20, 20)
+		DrawStats(app, fmt.Sprintf("PLAYER_X: %d", int(carPos.X)), 20, 40)
+		DrawStats(app, fmt.Sprintf("DELTATIME: %v", RoundtoDec(deltaTime, 2)), 20, 60)
 		app.Display()
 	}
 }
