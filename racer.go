@@ -61,7 +61,7 @@ const (
 	SegmentLength          = 200
 	CamInitialHeight       = 1000
 	MaxLaps                = 3
-	PlayerCentrifugalForce = 0.15
+	PlayerCentrifugalForce = 0.3
 )
 
 func RoundtoFloat(num int) float32 {
@@ -271,9 +271,9 @@ func main() {
 		if playerRiding {
 			playerSegment = roadMap[(startPosition+int(playerZ/SegmentLength))%len(roadMap)]
 			if speed > 0 {
-				camX -= camDx * playerSegment.curve * PlayerCentrifugalForce
+				camX -= camDx * speedPercent * playerSegment.curve * PlayerCentrifugalForce
 			} else {
-				camX -= -camDx * playerSegment.curve * PlayerCentrifugalForce
+				camX -= -camDx * speedPercent * playerSegment.curve * PlayerCentrifugalForce
 			}
 		}
 
@@ -331,7 +331,7 @@ func main() {
 		DrawStats(
 			app,
 			fmt.Sprintf(
-				"LAP: %d/%d\nFPS: %v\nSPEED:\t%v\nDELTATIME: %v",
+				"LAP: %d/%d\nFPS: %v\nSPEED:\t%v\nDELTA: %v",
 				currentLap,
 				MaxLaps,
 				RoundtoDec(float64(1/deltaTime), 1),
