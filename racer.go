@@ -207,7 +207,7 @@ func main() {
 	}
 
 	// Car sprite
-	carSprite, _ := sfml.NewSprite(texture)
+	carSprite, err := sfml.NewSprite(texture)
 	if err != nil {
 		panic(err)
 	}
